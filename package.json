@@ -1,0 +1,83 @@
+{
+  "name": "pi-loop",
+  "version": "0.1.0",
+  "description": "A pi extension that closes the verification loop on task completion",
+  "author": "monotykamary",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/monotykamary/pi-loop.git"
+  },
+  "homepage": "https://github.com/monotykamary/pi-loop#readme",
+  "bugs": {
+    "url": "https://github.com/monotykamary/pi-loop/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-extension",
+    "loop",
+    "verification",
+    "close-loop",
+    "agent",
+    "productivity"
+  ],
+  "files": [
+    "src/**/*.ts",
+    "tests/**/*.ts",
+    "vitest.config.ts",
+    "tsconfig.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "media/"
+  ],
+  "dependencies": {
+    "@mariozechner/pi-ai": "latest",
+    "@mariozechner/pi-coding-agent": "latest",
+    "@mariozechner/pi-tui": "latest",
+    "@sinclair/typebox": "latest"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^4.1.2",
+    "knip": "^6.2.0",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "simple-git-hooks": "^2.13.1",
+    "standard-version": "^9.5.0",
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.4"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint:dead": "knip --no-gitignore",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "release": "standard-version",
+    "release:dry-run": "standard-version --dry-run",
+    "postinstall": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npx lint-staged",
+    "pre-push": "npm run typecheck && npm run test",
+    "commit-msg": "npx commitlint --edit ${1}"
+  },
+  "lint-staged": {
+    "*.{ts,js,json,md}": [
+      "prettier --write"
+    ]
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "skills": [
+      "./skills/pi-loop"
+    ]
+  }
+}
