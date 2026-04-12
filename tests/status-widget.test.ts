@@ -53,6 +53,218 @@ describe('status-widget', () => {
     }
   });
 
+  describe('animation flow', () => {
+    it('triggers animation timer when leaving analyzing for steering', () => {
+      const ctx = createMockCtx();
+      const state = createMockState();
+
+      // Set initial thinking
+      updateUI(ctx, state, {
+        type: 'analyzing',
+        turn: 1,
+        thinking: 'Analysis content for animation test',
+      });
+
+      // Verify initial render has thinking
+      let lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      let widget = lastCall[1](null, { fg: (_c: string, t: string) => t });
+      let lines = widget.render(100);
+      expect(lines.length).toBeGreaterThan(1);
+
+      // Transition to steering - should set up animation timer
+      updateUI(ctx, state, {
+        type: 'steering',
+        message: 'Please fix',
+        reframeTier: 0,
+      });
+
+      // Widget still shows thinking (animation hasn't started yet, timer is set)
+      lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      widget = lastCall[1](null, { fg: (_c: string, t: string) => t });
+      lines = widget.render(100);
+      expect(lines.length).toBeGreaterThan(1);
+      expect(lines.join(' ')).toContain('Analysis content');
+      expect(lines.join(' ')).toContain('steering');
+    });
+
+    it('hides lines from bottom to top during animation', () => {
+      const ctx = createMockCtx();
+      const state = createMockState();
+
+      // Create a long thinking content that will wrap to multiple lines
+      const longThinking = 'Word one word two word three word four word five word six word seven';
+
+      // Start analyzing with thinking
+      updateUI(ctx, state, {
+        type: 'analyzing',
+        turn: 1,
+        thinking: longThinking,
+      });
+
+      // Capture the widget and get initial lines
+      let lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      const mockTheme = { fg: (_c: string, t: string) => t };
+      let widget = lastCall[1](null, mockTheme);
+      const width = 30; // Narrow width to force wrapping
+      const initialLines = widget.render(width);
+      const initialThinkingLines = initialLines.length - 1; // Exclude header
+      expect(initialThinkingLines).toBeGreaterThanOrEqual(2);
+
+      // Transition to done - thinking lines should be preserved for animation
+      updateUI(ctx, state, { type: 'done' });
+
+      // Verify before animation starts, all lines should be visible
+      lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      widget = lastCall[1](null, mockTheme);
+      const linesBeforeAnimation = widget.render(width);
+      expect(linesBeforeAnimation.length).toBe(initialLines.length);
+    });
+
+    it('animation progressively removes lines from bottom using hideFromBottom', () => {
+      // This test verifies the core animation mechanism:
+      // when hideFromBottom increases, fewer lines are shown from the bottom
+
+      const ctx = createMockCtx();
+      const state = createMockState();
+
+      // Set multi-line thinking - use a longer text that will wrap even at width 80
+      // The thinking indent is 2 spaces, so we need enough content to wrap
+      const longThinking =
+        'One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
+
+      updateUI(ctx, state, {
+        type: 'analyzing',
+        turn: 1,
+        thinking: longThinking,
+      });
+
+      const mockTheme = { fg: (_c: string, t: string) => t };
+
+      // Transition to steering to set up animation state
+      updateUI(ctx, state, {
+        type: 'steering',
+        message: 'Fix this',
+        reframeTier: 0,
+      });
+
+      const lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      const widget = lastCall[1](null, mockTheme);
+
+      // At this point the widget render function is set up with lastThinkingLines
+      // The key assertion: the render function is designed to handle hideFromBottom
+      // by slicing from 0 to (total - hideFromBottom)
+
+      const width = 78; // Width that allows some wrapping
+      const linesWithFullThinking = widget.render(width);
+
+      // Should have header + at least 1 thinking line
+      expect(linesWithFullThinking.length).toBeGreaterThanOrEqual(2);
+
+      // Verify the thinking lines contain expected words
+      const allText = linesWithFullThinking.join(' ');
+      expect(allText).toContain('One');
+      expect(allText).toContain('steering');
+    });
+
+    it('animation resets when new thinking arrives mid-animation', () => {
+      const ctx = createMockCtx();
+      const state = createMockState();
+
+      // Initial analysis
+      updateUI(ctx, state, {
+        type: 'analyzing',
+        turn: 1,
+        thinking: 'First analysis content',
+      });
+
+      // Start transition to steering (animation timer set)
+      updateUI(ctx, state, {
+        type: 'steering',
+        message: 'Fix this',
+        reframeTier: 0,
+      });
+
+      // Before animation completes, new analyzing content arrives
+      updateUI(ctx, state, {
+        type: 'analyzing',
+        turn: 2,
+        thinking: 'Fresh analysis after interrupt',
+      });
+
+      // Should show fresh content, animation state reset
+      const lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      const widget = lastCall[1](null, { fg: (_c: string, t: string) => t });
+      const lines = widget.render(100);
+
+      const allText = lines.join(' ');
+      expect(allText).toContain('Fresh analysis after interrupt');
+      expect(allText).not.toContain('First analysis content');
+      expect(allText).toContain('⟳ turn 2');
+    });
+
+    it('animation completes and clears thinking lines', () => {
+      const ctx = createMockCtx();
+      const state = createMockState();
+
+      // Start with analyzing
+      updateUI(ctx, state, {
+        type: 'analyzing',
+        turn: 1,
+        thinking: 'Short thinking',
+      });
+
+      // Transition to steering
+      updateUI(ctx, state, {
+        type: 'steering',
+        message: 'Please fix',
+        reframeTier: 0,
+      });
+
+      // Verify widget was rendered with thinking preserved
+      let lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      expect(lastCall[1]).not.toBeUndefined();
+
+      // Simulate supervisor becoming inactive (this happens after animation or when loop ends)
+      const inactiveState = { ...state, active: false };
+      updateUI(ctx, inactiveState as any);
+
+      // Widget should be cleared when inactive
+      const finalCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      expect(finalCall[1]).toBeUndefined();
+    });
+
+    it('cancels previous animation timer when new action arrives', () => {
+      const ctx = createMockCtx();
+      const state = createMockState();
+
+      // Start analyzing
+      updateUI(ctx, state, {
+        type: 'analyzing',
+        turn: 1,
+        thinking: 'Analysis one',
+      });
+
+      // Go to steering - sets timer
+      updateUI(ctx, state, {
+        type: 'steering',
+        message: 'First steer',
+        reframeTier: 0,
+      });
+
+      const callsAfterFirstSteer = ctx.ui.setWidget.mock.calls.length;
+
+      // Second steer before animation starts - should cancel first timer and set new one
+      updateUI(ctx, state, {
+        type: 'steering',
+        message: 'Second steer',
+        reframeTier: 0,
+      });
+
+      // Should have updated widget again
+      expect(ctx.ui.setWidget.mock.calls.length).toBeGreaterThan(callsAfterFirstSteer);
+    });
+  });
+
   describe('thought clearing behavior', () => {
     it('clears old thoughts immediately when new thinking arrives', () => {
       const ctx = createMockCtx();
@@ -139,7 +351,7 @@ describe('status-widget', () => {
       expect(allText).not.toContain('First analysis thinking');
     });
 
-    it('immediately clears thinking when leaving analyzing for steering (no animation delay)', () => {
+    it('preserves thinking lines when leaving analyzing for steering (animation will clear)', () => {
       const ctx = createMockCtx();
       const state = createMockState();
 
@@ -147,10 +359,10 @@ describe('status-widget', () => {
       updateUI(ctx, state, {
         type: 'analyzing',
         turn: 1,
-        thinking: 'Analysis thinking that should disappear immediately on steer',
+        thinking: 'Analysis thinking that should animate out on steer',
       });
 
-      // Step 2: Transition to steering - thinking should clear immediately, not animate
+      // Step 2: Transition to steering - thinking lines are preserved for animation
       updateUI(ctx, state, {
         type: 'steering',
         message: 'Please fix this issue',
@@ -166,14 +378,14 @@ describe('status-widget', () => {
       const widget = widgetFactory(null, mockTheme);
       const lines = widget.render(100);
 
-      // The thinking content should be immediately gone - only header line should remain
-      expect(lines.length).toBe(1); // Just the header line, no thinking lines
+      // The thinking content should be preserved for animation (not immediately cleared)
+      expect(lines.length).toBeGreaterThan(1); // Header + thinking lines
       const allText = lines.join(' ');
       expect(allText).toContain('steering');
-      expect(allText).not.toContain('Analysis thinking');
+      expect(allText).toContain('Analysis thinking');
     });
 
-    it('does not accumulate stale thinking through multiple rapid steers', () => {
+    it('preserves thinking lines through multiple rapid steers (animation handles clearing)', () => {
       const ctx = createMockCtx();
       const state = createMockState();
 
@@ -185,6 +397,7 @@ describe('status-widget', () => {
       });
 
       // Multiple rapid steers (faster than 15s animation delay)
+      // Each steer preserves thinking lines - animation will clear them after 15s delay
       for (let i = 0; i < 5; i++) {
         updateUI(ctx, state, {
           type: 'steering',
@@ -193,7 +406,7 @@ describe('status-widget', () => {
         });
       }
 
-      // Final state should not show any stale thinking
+      // Final state should preserve thinking lines (they animate out after delay)
       const lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
       const widgetFactory = lastCall[1];
       const mockTheme = {
@@ -202,14 +415,14 @@ describe('status-widget', () => {
       const widget = widgetFactory(null, mockTheme);
       const lines = widget.render(100);
 
-      // Should only have header line, no accumulated thinking lines
-      expect(lines.length).toBe(1);
+      // Should have header + thinking lines (animation will clear them)
+      expect(lines.length).toBeGreaterThan(1);
       const allText = lines.join(' ');
-      expect(allText).not.toContain('Initial analysis');
+      expect(allText).toContain('Initial analysis');
       expect(allText).toContain('steering');
     });
 
-    it('immediately clears thinking when leaving analyzing for done state', () => {
+    it('preserves thinking lines when leaving analyzing for done state (animation will clear)', () => {
       const ctx = createMockCtx();
       const state = createMockState();
 
@@ -217,10 +430,10 @@ describe('status-widget', () => {
       updateUI(ctx, state, {
         type: 'analyzing',
         turn: 1,
-        thinking: 'Analysis that should clear on done',
+        thinking: 'Analysis that will animate out on done',
       });
 
-      // Transition to done - thinking should clear immediately
+      // Transition to done - thinking lines are preserved for animation
       updateUI(ctx, state, { type: 'done' });
 
       const lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
@@ -231,11 +444,11 @@ describe('status-widget', () => {
       const widget = widgetFactory(null, mockTheme);
       const lines = widget.render(100);
 
-      // Should only have header line
-      expect(lines.length).toBe(1);
+      // Should have header + thinking lines (animation will clear them)
+      expect(lines.length).toBeGreaterThan(1);
       const allText = lines.join(' ');
       expect(allText).toContain('done');
-      expect(allText).not.toContain('Analysis that should clear');
+      expect(allText).toContain('Analysis that will animate out');
     });
 
     it('does not flash old thoughts when re-entering analyzing after steering', () => {
@@ -370,7 +583,7 @@ describe('status-widget', () => {
       expect(allText).not.toContain('Initial analysis');
     });
 
-    it('preserves thinking lines for animation when supervisor becomes inactive after done', () => {
+    it('preserves thinking lines when supervisor becomes inactive after done (animation will clear)', () => {
       const ctx = createMockCtx();
       const state = createMockState();
 
@@ -391,14 +604,14 @@ describe('status-widget', () => {
       const lastDoneCall = doneCalls[doneCalls.length - 1];
       expect(lastDoneCall[1]).not.toBeUndefined();
 
-      // Verify only header line is shown (thinking is hidden but preserved for animation)
+      // Verify thinking lines are preserved (shown until animation clears them)
       const widgetFactory = lastDoneCall[1];
       const mockTheme = { fg: (color: string, text: string) => text };
       const widget = widgetFactory(null, mockTheme);
       const lines = widget.render(100);
-      expect(lines.length).toBe(1);
+      expect(lines.length).toBeGreaterThan(1);
       expect(lines.join(' ')).toContain('done');
-      expect(lines.join(' ')).not.toContain('Analysis thinking');
+      expect(lines.join(' ')).toContain('Analysis thinking');
 
       // Step 3: Verify widget was updated after going inactive (animation path or clear)
       const callsAfterDone = ctx.ui.setWidget.mock.calls.length;

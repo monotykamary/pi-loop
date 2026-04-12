@@ -26,11 +26,6 @@ export function updateUI(
   const hasNewThinking =
     action.type === 'analyzing' && action.thinking && action.thinking !== state.lastThinking;
 
-  // Detect when leaving analyzing mode (for clear animation)
-  const wasAnalyzing = state.lastActionType === 'analyzing';
-  const isNowAnalyzing = action.type === 'analyzing';
-  const leavingAnalyzing = wasAnalyzing && !isNowAnalyzing;
-
   if (state.clearTimer) {
     clearTimeout(state.clearTimer);
     state.clearTimer = null;
@@ -44,12 +39,6 @@ export function updateUI(
   if (hasNewThinking) {
     state.hiddenFromBottomCount = 0;
     state.lastThinkingLines = [];
-  }
-
-  // When leaving analyzing, always animate the clear (steering, done, or watching)
-  if (leavingAnalyzing) {
-    state.lastThinking = ''; // Hide the thinking text
-    // lastThinkingLines is preserved for the animation
   }
 
   // Always update last state first
@@ -75,12 +64,7 @@ export function updateUI(
 
   const shouldAnimate = !supervisorState || !supervisorState.active || action.type === 'steering';
 
-  if (
-    shouldAnimate &&
-    state.lastActiveState &&
-    state.lastThinkingLines.length > 0 &&
-    !leavingAnalyzing
-  ) {
+  if (shouldAnimate && state.lastActiveState && state.lastThinkingLines.length > 0) {
     state.clearTimer = setTimeout(() => {
       const boundRender: RenderFn = (ctx, snap, action, thinking, hideFromBottom) => {
         renderWithState(ctx, state, snap, action, thinking, hideFromBottom);
@@ -98,7 +82,7 @@ export function updateUI(
       state,
       state.lastActiveState,
       fallbackAction,
-      leavingAnalyzing ? '' : state.lastThinking,
+      state.lastThinking,
       state.hiddenFromBottomCount
     );
     return;
@@ -217,10 +201,10 @@ function renderWithState(
           return [l1, ...visibleLines];
         }
 
-        if (!rawThinking) {
-          // Don't clear lastThinkingLines here - they may be needed for the clear animation.
-          // They'll be cleared by the animation completion or when supervisor becomes inactive.
-          return [l1];
+        // Always show previous thinking lines if they exist (animation will clear them)
+        if (widgetState.lastThinkingLines.length > 0 && !rawThinking) {
+          const visibleLines = widgetState.lastThinkingLines.map((ln) => theme.fg('dim', ln));
+          return [l1, ...visibleLines];
         }
 
         const thinkingIndent = stripAnsi(thinkingPrefix).length;
