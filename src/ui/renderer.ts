@@ -201,10 +201,17 @@ function renderWithState(
           return [l1, ...visibleLines];
         }
 
-        // Always show previous thinking lines if they exist (animation will clear them)
-        if (widgetState.lastThinkingLines.length > 0 && !rawThinking) {
+        // For non-analyzing states (steering/done/waiting), preserve existing line breaks.
+        // This prevents animation jumps caused by width changes from different headers.
+        const isAnalyzing = action.type === 'analyzing';
+        if (!isAnalyzing && widgetState.lastThinkingLines.length > 0) {
           const visibleLines = widgetState.lastThinkingLines.map((ln) => theme.fg('dim', ln));
           return [l1, ...visibleLines];
+        }
+
+        // No thinking to display
+        if (!rawThinking) {
+          return [l1];
         }
 
         const thinkingIndent = stripAnsi(thinkingPrefix).length;
