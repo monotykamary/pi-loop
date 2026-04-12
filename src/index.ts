@@ -293,6 +293,25 @@ export default function (pi: ExtensionAPI) {
       state.stop();
       disposeSession(); // Clean up reusable session
       updateUI(ctx, widgetState, state.getState());
+    } else if (decision.action === 'continue') {
+      // Goal not achieved, agent is idle — nudge to continue working
+      idleSteers++;
+      const continueMessage = decision.message?.trim()
+        ? decision.message
+        : 'Please continue working toward the goal.';
+      state.addIntervention({
+        turnCount: s.turnCount,
+        message: continueMessage,
+        reasoning: decision.reasoning || 'Goal not yet achieved, continuing work',
+        timestamp: Date.now(),
+        asi: decision.asi,
+      });
+      updateUI(ctx, widgetState, state.getState(), {
+        type: 'steering',
+        message: continueMessage,
+        reframeTier: state.getReframeTier(),
+      });
+      pi.sendUserMessage(continueMessage);
     } else {
       updateUI(ctx, widgetState, state.getState(), {
         type: 'watching',
