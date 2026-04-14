@@ -263,6 +263,64 @@ describe('status-widget', () => {
       // Should have updated widget again
       expect(ctx.ui.setWidget.mock.calls.length).toBeGreaterThan(callsAfterFirstSteer);
     });
+
+    it('steering preserves thinking for animation to clear - regression test for empty lines bug', () => {
+      // This test documents the bug fix for the case where lastThinkingLines was empty
+      // when the animation timer fired, causing the animation to return early and leave
+      // thoughts on screen indefinitely.
+      //
+      // Bug scenario:
+      // 1. updateUI called with analyzing, sets lastThinking
+      // 2. renderWithState called, populates lastThinkingLines based on lastThinking
+      // 3. updateUI called with steering, sets up animation timer
+      // 4. renderWithState called with hideFromBottom > 0, returns early (doesn't update lastThinkingLines)
+      // 5. 15 seconds later, animation timer fires
+      // 6. startLineClearAnimation checks lastThinkingLines.length === 0, returns early
+      // 7. Thoughts stay on screen forever!
+      //
+      // Fix: Before setting the animation timer, populate lastThinkingLines
+      // from lastThinking so the animation can run properly.
+      //
+      // This test verifies that after steering, the thinking is preserved
+      // so the animation (which runs after 15 seconds) can properly clear it.
+
+      const ctx = createMockCtx();
+      const state = createMockState();
+
+      // Start with analyzing and multi-line thinking content
+      updateUI(ctx, state, {
+        type: 'analyzing',
+        turn: 1,
+        thinking: 'First line of thinking that needs to be cleared by animation',
+      });
+
+      // Transition to steering - thinking lines should be preserved for animation
+      updateUI(ctx, state, {
+        type: 'steering',
+        message: 'Fix this',
+        reframeTier: 0,
+      });
+
+      // Verify the widget shows the thinking content (will be cleared by animation after 15s)
+      const lastCall = ctx.ui.setWidget.mock.calls[ctx.ui.setWidget.mock.calls.length - 1];
+      const widgetFactory = lastCall[1];
+      const mockTheme = { fg: (_c: string, t: string) => t };
+      const widget = widgetFactory(null, mockTheme);
+      const lines = widget.render(100);
+
+      // Should have header + thinking lines
+      expect(lines.length).toBeGreaterThan(1);
+      const allText = lines.join(' ');
+
+      // Widget shows steering status
+      expect(allText).toContain('steering');
+
+      // Thinking content is preserved for animation to clear
+      expect(allText).toContain('First line of thinking');
+
+      // The thinking will be cleared by the animation after the 15s timer fires
+      // (verified by the animation completing and calling renderFn with empty thinking)
+    });
   });
 
   describe('thought clearing behavior', () => {

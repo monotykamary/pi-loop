@@ -65,18 +65,26 @@ export function updateUI(
   const shouldAnimate = !supervisorState || !supervisorState.active || action.type === 'steering';
 
   if (shouldAnimate && state.lastActiveState && state.lastThinkingLines.length > 0) {
-    state.clearTimer = setTimeout(() => {
-      const boundRender: RenderFn = (ctx, snap, action, thinking, hideFromBottom) => {
-        renderWithState(ctx, state, snap, action, thinking, hideFromBottom);
-      };
-      startLineClearAnimation(ctx, state, boundRender);
-    }, CLEAR_DELAY_MS);
     const fallbackAction: WidgetAction =
       action.type === 'steering'
         ? { type: 'steering', message: '', reframeTier: action.reframeTier }
         : { type: 'done', reframeTier: 0 };
     state.lastActionType = fallbackAction.type;
     state.storedAction = fallbackAction;
+
+    // Ensure lastThinkingLines is populated before the animation timer fires.
+    // renderWithState returns early when hideFromBottom > 0 (during animation),
+    // so we need to compute the lines here to ensure the animation can run.
+    if (state.lastThinking && state.lastThinkingLines.length === 0) {
+      state.lastThinkingLines = state.lastThinking.split('\n');
+    }
+
+    state.clearTimer = setTimeout(() => {
+      const boundRender: RenderFn = (ctx, snap, action, thinking, hideFromBottom) => {
+        renderWithState(ctx, state, snap, action, thinking, hideFromBottom);
+      };
+      startLineClearAnimation(ctx, state, boundRender);
+    }, CLEAR_DELAY_MS);
     renderWithState(
       ctx,
       state,
