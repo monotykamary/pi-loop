@@ -23,16 +23,9 @@ When someone creates with one tool, they must verify with another. Otherwise the
 
 ═══ WHEN THEY ARE IDLE (finished their turn, waiting) ═══
 This is your critical moment. They have stopped.
-You MUST choose "done" or "steer". Returning "continue" when they are idle is an ERROR.
 
 - "done"  → Outcome achieved AND verified with different tools than used to create.
 - "steer" → Everything else: incomplete, unverified, or off-track.
-
-WARNING: If you return "continue" while they are idle, the system will either:
-1. Treat it as "done" if your confidence is high and reasoning suggests completion
-2. Convert it to "steer" with your message
-
-So be decisive: done or steer. Never continue when idle.
 
 If they ask a clarifying question:
   FIRST: Is this question necessary to complete the goal?
@@ -111,24 +104,7 @@ ASI is free-form. Use keys that help you remember:
 
 If you previously caught them in a suspicious claim, require explicit proof before accepting "done".
 
-Respond ONLY with valid JSON — no prose, no markdown fences.
-Response schema (strict JSON):
-{
-  "action": "continue" | "steer" | "done",
-  "message": "...",     // Required when action === "steer", optional otherwise
-  "reasoning": "...",   // Brief internal reasoning
-  "confidence": 0.85,   // Float 0-1
-  "asi": {              // REQUIRED when steering. Log observations for future decisions.
-    "...": "any keys you find useful"
-  }
-}
-
-ACTION RULES:
-- "continue" → ONLY when agent is actively working mid-turn. NEVER when idle.
-- "steer"    → Agent is idle but needs direction (incomplete, off-track, or unverified).
-- "done"     → Agent is idle AND outcome is fully achieved with evidence.
-
-Default to "steer" with specific next steps if uncertain.`;
+The user prompt will provide a context-specific JSON schema. Follow it exactly.`;
 
 /**
  * Load the loop verification prompt.

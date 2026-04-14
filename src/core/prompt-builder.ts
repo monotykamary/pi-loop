@@ -96,8 +96,26 @@ export function buildUserPrompt(
 
   const agentStatus = agentIsIdle
     ? `AGENT STATUS: IDLE — the agent has finished its turn and is now waiting for user input.
-You MUST return "done" or "steer". Returning "continue" here means the agent stays idle forever.`
-    : `AGENT STATUS: WORKING — the agent is actively processing. Only intervene if clearly off track.`;
+DECISION: You MUST return "done" or "steer". "continue" is NOT VALID when the agent is idle.`
+    : `AGENT STATUS: WORKING — the agent is actively processing. Only intervene if clearly off track.
+DECISION: Return "continue" (let them work) or "steer" (intervene now).`;
+
+  // Context-aware JSON schema - only include valid actions for current state
+  const responseSchema = agentIsIdle
+    ? `{
+  "action": "done" | "steer",  // ONLY these two when agent is idle
+  "message": "...",              // Required when "steer" (what to tell the agent)
+  "reasoning": "...",            // Why you chose this action
+  "confidence": 0.85,            // 0-1 float
+  "asi": { "...": "..." }        // REQUIRED when steering. Log patterns for future turns
+}`
+    : `{
+  "action": "continue" | "steer", // "continue" lets them work; "steer" interrupts now
+  "message": "...",                // Required when "steer"
+  "reasoning": "...",
+  "confidence": 0.85,
+  "asi": { "...": "..." }          // REQUIRED when steering
+}`;
 
   const reframeGuidance = getReframeGuidance(state.reframeTier ?? 0, ineffectivePattern);
   const reframeSection = reframeGuidance ? `\n${reframeGuidance}\n` : '';
@@ -117,7 +135,8 @@ ${asiSummary}
 REMINDER — DESIRED OUTCOME:
 ${state.outcome}
 
-Has this outcome been fully achieved? Analyze and respond with JSON only.`;
+Respond ONLY with valid JSON matching this schema (no prose, no markdown fences):
+${responseSchema}`;
 }
 
 /** Build summary of ASI patterns to close the loop */

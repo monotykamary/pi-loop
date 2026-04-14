@@ -38,7 +38,7 @@ describe('loadSystemPrompt', () => {
 
     expect(result.source).toBe('built-in');
     expect(result.prompt).toContain('You ensure outcomes');
-    expect(result.prompt).toContain('Response schema');
+    expect(result.prompt).toContain('context-specific JSON schema');
   });
 
   it('loads project LOOP.md when it exists', () => {
@@ -96,7 +96,7 @@ describe('loadSystemPrompt', () => {
     expect(result.prompt).toContain('═══ YOUR MEMORY (ASI) ═══');
     expect(result.prompt).toContain('ASI is your recall across turns');
     expect(result.prompt).toContain('Before deciding, READ your past ASI');
-    expect(result.prompt).toContain('REQUIRED when steering');
+    expect(result.prompt).toContain('Populate it when steering');
   });
 });
 
