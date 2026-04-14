@@ -81,8 +81,8 @@ describe('loadSystemPrompt', () => {
 
     expect(result.source).toBe('built-in');
     expect(result.prompt).toContain('The Honesty Check');
-    expect(result.prompt).toContain('Unverified claims');
-    expect(result.prompt).toContain('Same-tool verification');
+    expect(result.prompt).toContain('Contradicted claims');
+    expect(result.prompt).toContain('Missing evidence');
     expect(result.prompt).toContain('Test manipulation');
     expect(result.prompt).toContain('Short-circuiting');
   });

@@ -294,24 +294,51 @@ export default function (pi: ExtensionAPI) {
       disposeSession(); // Clean up reusable session
       updateUI(ctx, widgetState, state.getState());
     } else if (decision.action === 'continue') {
-      // Goal not achieved, agent is idle — nudge to continue working
-      idleSteers++;
-      const continueMessage = decision.message?.trim()
-        ? decision.message
-        : 'Please continue working toward the goal.';
-      state.addIntervention({
-        turnCount: s.turnCount,
-        message: continueMessage,
-        reasoning: decision.reasoning || 'Goal not yet achieved, continuing work',
-        timestamp: Date.now(),
-        asi: decision.asi,
-      });
-      updateUI(ctx, widgetState, state.getState(), {
-        type: 'steering',
-        message: continueMessage,
-        reframeTier: state.getReframeTier(),
-      });
-      pi.sendUserMessage(continueMessage);
+      // SANITY CHECK: At agent_end, the agent is IDLE. The prompt explicitly
+      // instructs supervisor to NEVER return 'continue' when agent is idle.
+      // If we get 'continue' here, the model is not following instructions.
+      //
+      // We have two choices:
+      // 1. If confidence is high (>=0.8) and reasoning suggests completion,
+      //    treat as 'done' — the model likely meant to say done but returned wrong action
+      // 2. Otherwise treat as 'steer' with the provided message or a default nudge
+
+      const highConfidenceOfCompletion =
+        decision.confidence >= 0.8 &&
+        (decision.reasoning?.toLowerCase().includes('complete') ||
+          decision.reasoning?.toLowerCase().includes('verified') ||
+          decision.reasoning?.toLowerCase().includes('achieved') ||
+          decision.reasoning?.toLowerCase().includes('done') ||
+          decision.reasoning?.toLowerCase().includes('implemented'));
+
+      if (highConfidenceOfCompletion) {
+        // Model likely meant to return 'done' but returned 'continue' by mistake
+        idleSteers = 0;
+        state.resetReframeTier();
+        updateUI(ctx, widgetState, state.getState(), { type: 'done' });
+        state.stop();
+        disposeSession();
+        updateUI(ctx, widgetState, state.getState());
+      } else {
+        // Treat as steer — goal not achieved, agent needs direction
+        idleSteers++;
+        const steerMessage = decision.message?.trim()
+          ? decision.message
+          : 'Please continue working toward the goal.';
+        state.addIntervention({
+          turnCount: s.turnCount,
+          message: steerMessage,
+          reasoning: decision.reasoning || 'Goal not yet achieved, continuing work',
+          timestamp: Date.now(),
+          asi: { ...decision.asi, _sanity: 'converted_continue_at_idle_to_steer' },
+        });
+        updateUI(ctx, widgetState, state.getState(), {
+          type: 'steering',
+          message: steerMessage,
+          reframeTier: state.getReframeTier(),
+        });
+        pi.sendUserMessage(steerMessage);
+      }
     } else {
       updateUI(ctx, widgetState, state.getState(), {
         type: 'watching',
