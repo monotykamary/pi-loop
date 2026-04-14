@@ -101,8 +101,8 @@ describe('loadSystemPrompt', () => {
 });
 
 describe('SNAPSHOT_LIMIT', () => {
-  it('is set to 6 messages', () => {
-    expect(SNAPSHOT_LIMIT).toBe(6);
+  it('is set to 20 messages', () => {
+    expect(SNAPSHOT_LIMIT).toBe(20);
   });
 });
 

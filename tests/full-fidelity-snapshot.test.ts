@@ -372,31 +372,19 @@ describe('Full Fidelity Snapshot Capture', () => {
   });
 
   describe('Snapshot Limiting (6 messages)', () => {
-    it('limits to 6 messages total', () => {
+    it('limits to 20 messages total', () => {
+      // Test with more messages than the limit
+      const manyMessages = Array.from({ length: 25 }, (_, i) => ({
+        type: 'message' as const,
+        message: {
+          role: 'user' as const,
+          content: [{ type: 'text' as const, text: String(i + 1) }],
+        },
+      }));
+
       const mockCtx = {
         sessionManager: {
-          getBranch: () => [
-            { type: 'message', message: { role: 'user', content: [{ type: 'text', text: '1' }] } },
-            {
-              type: 'message',
-              message: { role: 'assistant', content: [{ type: 'text', text: '2' }] },
-            },
-            { type: 'message', message: { role: 'user', content: [{ type: 'text', text: '3' }] } },
-            {
-              type: 'message',
-              message: { role: 'assistant', content: [{ type: 'text', text: '4' }] },
-            },
-            { type: 'message', message: { role: 'user', content: [{ type: 'text', text: '5' }] } },
-            {
-              type: 'message',
-              message: { role: 'assistant', content: [{ type: 'text', text: '6' }] },
-            },
-            { type: 'message', message: { role: 'user', content: [{ type: 'text', text: '7' }] } },
-            {
-              type: 'message',
-              message: { role: 'assistant', content: [{ type: 'text', text: '8' }] },
-            },
-          ],
+          getBranch: () => manyMessages,
         },
       } as any;
 
@@ -414,13 +402,13 @@ describe('Full Fidelity Snapshot Capture', () => {
 
       const result = buildIncrementalSnapshot(mockCtx, state);
 
-      expect(result).toHaveLength(6);
-      // Should keep the most recent 6 (messages 3-8)
-      expect(result[0].content).toBe('3');
-      expect(result[5].content).toBe('8');
+      expect(result).toHaveLength(20);
+      // Should keep the most recent 20 (messages 6-25)
+      expect(result[0].content).toBe('6');
+      expect(result[19].content).toBe('25');
     });
 
-    it('preserves tool results within the 6-message window', () => {
+    it('preserves tool results within the 20-message window', () => {
       const mockCtx = {
         sessionManager: {
           getBranch: () => [
@@ -478,7 +466,7 @@ describe('Full Fidelity Snapshot Capture', () => {
 
       const result = buildIncrementalSnapshot(mockCtx, state);
 
-      expect(result.length).toBeLessThanOrEqual(6);
+      expect(result.length).toBeLessThanOrEqual(20);
       // Should include the tool result message
       const toolResult = result.find((m) => m.role === 'tool_results');
       expect(toolResult).toBeDefined();
