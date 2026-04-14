@@ -29,7 +29,7 @@ An external observer watches from outside without modifying the agent's context.
 
 **Anti-cheat via multi-modal:** The agent cannot game verification because it must re-access work via different cognitive paths.
 
-**Token efficiency:** The observer reuses its session across analyses and builds conversation snapshots incrementally, using ~85% fewer tokens than naive oversight.
+**Token efficiency:** The observer reuses its session across analyses and builds conversation snapshots incrementally, using ~85% fewer tokens than naive oversight. The snapshot captures the last 20 messages (user prompts, assistant responses, tool calls, and tool outputs) to keep context focused while ensuring the observer can see multi-modal verification evidence.
 
 ## Install
 

@@ -10,7 +10,7 @@ import type { ConversationMessage, LoopState, ToolResultEntry, ContentBlock } fr
 import { extractAllBlocks, extractText, extractAssistantText } from './content-extractor.js';
 
 /** Fixed message limit for supervisor context window. */
-export const SNAPSHOT_LIMIT = 6;
+export const SNAPSHOT_LIMIT = 20;
 
 /**
  * Incrementally build snapshot from new session entries since last analysis.
