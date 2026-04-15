@@ -472,6 +472,170 @@ describe('Full Fidelity Snapshot Capture', () => {
       expect(toolResult).toBeDefined();
       expect(toolResult?.content).toContain('file1.txt');
     });
+
+    it('captures write tool results with non-standard entry types', () => {
+      const mockCtx = {
+        sessionManager: {
+          getBranch: () => [
+            {
+              type: 'message',
+              message: {
+                role: 'assistant',
+                content: [
+                  { type: 'text', text: 'Writing the file.' },
+                  {
+                    type: 'tool_use',
+                    id: 'w1',
+                    name: 'write',
+                    input: { path: '/src/index.ts', content: '...' },
+                  },
+                ],
+              },
+            },
+            // Non-standard entry types that might come from write/edit tools
+            {
+              type: 'write_result',
+              id: 'w1',
+              name: 'write',
+              content: 'Written: /src/index.ts',
+            },
+            {
+              type: 'message',
+              message: {
+                role: 'assistant',
+                content: [{ type: 'text', text: 'File written successfully.' }],
+              },
+            },
+          ],
+        },
+      } as any;
+
+      const state: LoopState = {
+        active: true,
+        outcome: 'Write code',
+        provider: 'anthropic',
+        modelId: 'claude',
+        interventions: [],
+        startedAt: Date.now(),
+        turnCount: 1,
+        snapshotBuffer: [],
+        lastAnalyzedTurn: -1,
+      };
+
+      const result = buildIncrementalSnapshot(mockCtx, state);
+
+      // Verify the write tool result was captured
+      const writeResult = result.find(
+        (m) => m.role === 'tool_results' && m.content.includes('Written')
+      );
+      expect(writeResult).toBeDefined();
+      expect(writeResult?.content).toContain('/src/index.ts');
+    });
+
+    it('captures edit tool results with non-standard entry types', () => {
+      const mockCtx = {
+        sessionManager: {
+          getBranch: () => [
+            {
+              type: 'edit_result',
+              id: 'e1',
+              name: 'edit',
+              content: 'Edited: /src/utils.ts',
+            },
+          ],
+        },
+      } as any;
+
+      const state: LoopState = {
+        active: true,
+        outcome: 'Edit code',
+        provider: 'anthropic',
+        modelId: 'claude',
+        interventions: [],
+        startedAt: Date.now(),
+        turnCount: 1,
+        snapshotBuffer: [],
+        lastAnalyzedTurn: -1,
+      };
+
+      const result = buildIncrementalSnapshot(mockCtx, state);
+
+      // Verify the edit tool result was captured
+      const editResult = result.find(
+        (m) => m.role === 'tool_results' && m.content.includes('Edited')
+      );
+      expect(editResult).toBeDefined();
+      expect(editResult?.content).toContain('/src/utils.ts');
+    });
+
+    it('captures tool results with array content format', () => {
+      const mockCtx = {
+        sessionManager: {
+          getBranch: () => [
+            {
+              type: 'tool_output',
+              id: 't1',
+              name: 'write',
+              content: [{ type: 'text', text: 'Written: /path/file.ts' }],
+            },
+          ],
+        },
+      } as any;
+
+      const state: LoopState = {
+        active: true,
+        outcome: 'Write',
+        provider: 'anthropic',
+        modelId: 'claude',
+        interventions: [],
+        startedAt: Date.now(),
+        turnCount: 1,
+        snapshotBuffer: [],
+        lastAnalyzedTurn: -1,
+      };
+
+      const result = buildIncrementalSnapshot(mockCtx, state);
+
+      const toolResult = result.find((m) => m.role === 'tool_results');
+      expect(toolResult).toBeDefined();
+      expect(toolResult?.content).toContain('/path/file.ts');
+    });
+
+    it('skips state entries without content (no false positives)', () => {
+      const mockCtx = {
+        sessionManager: {
+          getBranch: () => [
+            {
+              type: 'custom',
+              customType: 'loop-state',
+              data: { active: true, outcome: 'Test' }, // State entry, no content
+            },
+            {
+              type: 'session_entry',
+              id: 'state1',
+              // No content field - should be skipped
+            },
+          ],
+        },
+      } as any;
+
+      const state: LoopState = {
+        active: true,
+        outcome: 'Test',
+        provider: 'anthropic',
+        modelId: 'claude',
+        interventions: [],
+        startedAt: Date.now(),
+        turnCount: 1,
+        snapshotBuffer: [],
+        lastAnalyzedTurn: -1,
+      };
+
+      const result = buildIncrementalSnapshot(mockCtx, state);
+
+      // Should not have any tool_results from state entries
+      expect(result.filter((m) => m.role === 'tool_results')).toHaveLength(0);
+    });
   });
 });
 

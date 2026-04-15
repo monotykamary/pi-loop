@@ -170,6 +170,65 @@ export function buildIncrementalSnapshot(
         });
       }
     }
+
+    // Catch-all for any other tool result entries (write, edit, or any tool not explicitly handled above)
+    // This ensures tool results aren't silently dropped if they come through with non-standard entry types
+    if (
+      entry.type !== 'message' &&
+      entry.type !== 'custom_message' &&
+      (entry as any).type !== 'bash_execution' &&
+      (entry as any).type !== 'bash_result'
+    ) {
+      const otherEntry = entry as any;
+
+      // Only process if it looks like a tool result (has output-like content)
+      const content =
+        otherEntry.content || otherEntry.result || otherEntry.output || otherEntry.text;
+      const toolName = otherEntry.customType || otherEntry.name || otherEntry.tool || 'tool';
+
+      // Skip entries that don't have meaningful content (like state entries)
+      if (
+        content &&
+        typeof content === 'string' &&
+        content.length > 0 &&
+        !otherEntry.customType?.includes('state')
+      ) {
+        pendingToolResults.push({
+          toolCallId: otherEntry.id || otherEntry.toolCallId || 'unknown',
+          toolName,
+          input: otherEntry.details || otherEntry.input || {},
+          content: [{ type: 'text', text: content }],
+          isError: otherEntry.isError || otherEntry.is_error || false,
+        });
+
+        newMessages.push({
+          role: 'tool_results',
+          content,
+          blocks: [{ type: 'text', text: content }],
+        });
+      } else if (Array.isArray(content) && content.length > 0) {
+        // Handle rich content arrays (e.g., tool results with image blocks)
+        const allBlocks = extractAllBlocks(content);
+        const textContent = content
+          .filter((b: any) => b.type === 'text')
+          .map((b: any) => b.text)
+          .join('\n');
+
+        pendingToolResults.push({
+          toolCallId: otherEntry.id || otherEntry.toolCallId || 'unknown',
+          toolName,
+          input: otherEntry.details || otherEntry.input || {},
+          content: allBlocks,
+          isError: otherEntry.isError || otherEntry.is_error || false,
+        });
+
+        newMessages.push({
+          role: 'tool_results',
+          content: textContent || `[${toolName} output]`,
+          blocks: allBlocks,
+        });
+      }
+    }
   }
 
   // Keep only last 6, compress older if needed
