@@ -6,6 +6,7 @@
 import {
   createAgentSession,
   DefaultResourceLoader,
+  getAgentDir,
   SessionManager,
 } from '@mariozechner/pi-coding-agent';
 import type { ExtensionContext } from '@mariozechner/pi-coding-agent';
@@ -34,6 +35,8 @@ export class LoopSession {
     this.dispose();
 
     const loader = new DefaultResourceLoader({
+      cwd: ctx.cwd,
+      agentDir: getAgentDir(),
       noExtensions: true,
       noSkills: true,
       noPromptTemplates: true,
