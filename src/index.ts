@@ -14,8 +14,8 @@
  *   /loop widget       — toggle the status widget on/off
  */
 
-import { truncateToWidth } from '@mariozechner/pi-tui';
-import type { ExtensionAPI, ExtensionContext } from '@mariozechner/pi-coding-agent';
+import { truncateToWidth } from '@earendil-works/pi-tui';
+import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { LoopStateManager } from './state/manager.js';
 import { analyze } from './core/analyzer.js';
 import { inferOutcome } from './core/inference.js';

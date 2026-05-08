@@ -2,7 +2,7 @@
  * LoopStateManager — manages in-memory loop state and session persistence.
  */
 
-import type { ExtensionAPI, ExtensionContext } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { LoopState, LoopIntervention, ConversationMessage, ReframeTier } from '../types.js';
 import { detectIneffectivePattern, type IneffectivePattern } from './patterns.js';
 import {

@@ -7,7 +7,7 @@
  * Toggle visibility with toggleWidget().
  */
 
-import type { ExtensionContext } from '@mariozechner/pi-coding-agent';
+import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { LoopState } from '../types.js';
 import { createInitialState, type WidgetAction, WIDGET_ID } from './types.js';
 import { toggleWidget as toggleWidgetImpl, updateUI as updateUIImpl } from './renderer.js';

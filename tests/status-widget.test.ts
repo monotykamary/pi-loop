@@ -3,7 +3,7 @@ import { updateUI, toggleWidget } from '../src/ui/status-widget.js';
 import type { LoopState } from '../src/types.js';
 
 // Mock the TUI module
-vi.mock('@mariozechner/pi-tui', () => ({
+vi.mock('@earendil-works/pi-tui', () => ({
   truncateToWidth: (text: string, width: number) => {
     if (text.length <= width) return text;
     return text.slice(0, width);

@@ -8,8 +8,8 @@ import {
   DefaultResourceLoader,
   getAgentDir,
   SessionManager,
-} from '@mariozechner/pi-coding-agent';
-import type { ExtensionContext } from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
+import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 
 export class LoopSession {
   private session: Awaited<ReturnType<typeof createAgentSession>>['session'] | null = null;

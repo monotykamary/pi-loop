@@ -2,7 +2,7 @@
  * Animation utilities for the supervisor widget.
  */
 
-import type { ExtensionContext } from '@mariozechner/pi-coding-agent';
+import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { WidgetState, WidgetAction } from './types.js';
 import type { LoopIntervention } from '../types.js';
 import { WIDGET_ID, ANIMATION_STEP_MS } from './types.js';

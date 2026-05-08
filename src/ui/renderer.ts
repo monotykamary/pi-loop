@@ -2,8 +2,8 @@
  * Widget renderer - handles the visual rendering of the supervisor status widget.
  */
 
-import type { ExtensionContext } from '@mariozechner/pi-coding-agent';
-import { truncateToWidth } from '@mariozechner/pi-tui';
+import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
+import { truncateToWidth } from '@earendil-works/pi-tui';
 import type { LoopIntervention, LoopState } from '../types.js';
 import type { WidgetAction, WidgetState } from './types.js';
 import { WIDGET_ID, CLEAR_DELAY_MS } from './types.js';

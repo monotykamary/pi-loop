@@ -2,7 +2,7 @@
  * Session client - high-level interface for calling the observer model.
  */
 
-import type { ExtensionContext } from '@mariozechner/pi-coding-agent';
+import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { SteeringDecision } from '../types.js';
 import { LoopSession } from './loop-session.js';
 import { parseDecision, safeContinue } from './response-parser.js';

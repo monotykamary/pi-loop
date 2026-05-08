@@ -2,7 +2,7 @@
  * Outcome inference from conversation history.
  */
 
-import type { ExtensionContext } from '@mariozechner/pi-coding-agent';
+import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 import type { ConversationMessage } from '../types.js';
 import { LoopSession } from '../session/loop-session.js';
 import { extractAllBlocks, extractText, extractAssistantText } from './content-extractor.js';
