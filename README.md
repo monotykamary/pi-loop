@@ -1,6 +1,17 @@
-# pi-loop
+<div align="center">
 
-A [pi](https://pi.dev) extension that closes the verification loop on task completion. When you invoke `/loop`, the agent enters a mode where it must self-verify before declaring work complete — using different tools than used to create (multi-modal verification). An external observer validates that the loop was actually closed.
+# 🔁 pi-loop
+
+**Close the verification loop for [pi](https://github.com/earendil-works/pi-coding-agent)**
+
+_Verify with different tools than used to create — multi-modal verification before declaring done._
+
+[![pi extension](https://img.shields.io/badge/pi-extension-blueviolet)](https://github.com/earendil-works/pi-coding-agent)
+[![license](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
+</div>
+
+---
 
 > Close the loop — verify before you commit.
 
