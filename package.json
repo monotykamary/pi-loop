@@ -1,6 +1,6 @@
 {
   "name": "pi-loop",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "description": "A pi extension that closes the verification loop on task completion",
   "author": "monotykamary",
   "license": "MIT",
@@ -36,7 +36,6 @@
   "peerDependencies": {
     "@earendil-works/pi-ai": ">=0.74.0",
     "@earendil-works/pi-coding-agent": ">=0.74.0",
-    "@earendil-works/pi-tui": ">=0.74.0",
     "@sinclair/typebox": "0.34.49"
   },
   "devDependencies": {
@@ -50,7 +49,8 @@
     "simple-git-hooks": "2.13.1",
     "standard-version": "9.5.0",
     "typescript": "6.0.3",
-    "vitest": "4.1.7"
+    "vitest": "4.1.7",
+    "@earendil-works/pi-tui": "0.79.4"
   },
   "scripts": {
     "test": "vitest run",
