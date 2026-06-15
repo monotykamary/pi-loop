@@ -45,12 +45,6 @@ An external observer watches from outside without modifying the agent's context.
 ## Install
 
 ```bash
-pi install npm:pi-loop
-```
-
-Or install from GitHub:
-
-```bash
 pi install https://github.com/monotykamary/pi-loop
 ```
 
