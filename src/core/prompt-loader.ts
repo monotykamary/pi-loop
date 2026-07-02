@@ -9,11 +9,10 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { getAgentDir } from '@earendil-works/pi-coding-agent';
 
 const LOOP_MD = 'LOOP.md';
 const CONFIG_DIR = '.pi';
-const GLOBAL_AGENT_DIR = join(homedir(), '.pi', 'agent');
 
 /** Built-in fallback system prompt. */
 const BUILTIN_SYSTEM_PROMPT = `You ensure outcomes are actually achieved — not just claimed.
@@ -118,7 +117,7 @@ export function loadSystemPrompt(cwd: string): { prompt: string; source: string 
     return { prompt: readFileSync(projectPath, 'utf-8').trim(), source: projectPath };
   }
 
-  const globalPath = join(GLOBAL_AGENT_DIR, LOOP_MD);
+  const globalPath = join(getAgentDir(), LOOP_MD);
   if (existsSync(globalPath)) {
     return { prompt: readFileSync(globalPath, 'utf-8').trim(), source: globalPath };
   }

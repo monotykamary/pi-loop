@@ -11,12 +11,6 @@ vi.mock('node:fs', async () => {
   };
 });
 
-vi.mock('node:os', async () => {
-  return {
-    homedir: () => '/home/test',
-  };
-});
-
 import { existsSync, readFileSync } from 'node:fs';
 import { loadSystemPrompt } from '../src/core/prompt-loader.js';
 import { SNAPSHOT_LIMIT, updateSnapshot } from '../src/core/snapshot-builder.js';
@@ -28,6 +22,11 @@ import { LoopSession } from '../src/session/loop-session.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv('PI_CODING_AGENT_DIR', '/home/test/.pi/agent');
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe('loadSystemPrompt', () => {
