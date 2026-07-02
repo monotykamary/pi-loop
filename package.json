@@ -1,6 +1,6 @@
 {
   "name": "pi-loop",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A pi extension that closes the verification loop on task completion",
   "author": "monotykamary",
   "license": "MIT",
