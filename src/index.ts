@@ -130,7 +130,7 @@ export default function (pi: ExtensionAPI) {
   // ---- After compaction: reload state and continue loop if agent is working ----
   // Auto-compaction during long sessions should NOT stop loop - we want to
   // continue steering the agent toward the goal after compaction completes.
-  pi.on('session_compact', async (_event, ctx) => {
+  pi.on('session_compact', async (event, ctx) => {
     currentCtx = ctx;
     state.loadFromSession(ctx);
 
@@ -140,8 +140,11 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // Ephemeral rule: if agent is idle after compaction, clear loop
-    if (ctx.isIdle()) {
+    // Ephemeral rule: if agent is idle after compaction and no overflow
+    // retry is pending, clear loop. Overflow compaction (event.willRetry)
+    // resumes the aborted turn; keep the loop alive so agent_settled can
+    // analyze/steer the resumed run.
+    if (ctx.isIdle() && !event.willRetry) {
       state.stop();
       idleSteers = 0;
       disposeSession();
@@ -151,7 +154,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     // Agent is still working - show watching state and let loop continue
-    // It will analyze/steer at the next agent_end as normal
+    // It will analyze/steer at the next agent_settled as normal
     updateUI(ctx, widgetState, state.getState(), {
       type: 'watching',
       reframeTier: state.getReframeTier(),
