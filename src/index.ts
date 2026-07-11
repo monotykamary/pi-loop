@@ -2,7 +2,7 @@
  * pi-loop — A pi extension that closes the verification loop on task completion.
  *
  * Token-optimal design:
- * - Single trigger: always at agent_end (when idle)
+ * - Single trigger: always at agent_settled (when fully idle)
  * - Mid-run: only if just steered (checking if it worked) or safety valve every 8th turn
  * - Session reuse for automatic prompt caching
  * - Incremental 6-message snapshots
@@ -202,10 +202,11 @@ export default function (pi: ExtensionAPI) {
   });
 
   // ---- After each agent run: analyze + steer ----
-  // agent_end fires once per user prompt, always with the agent idle and waiting for input.
-  // This is the critical checkpoint where we decide done/steer/continue.
+  // agent_settled fires once pi has fully settled — auto-retries, overflow-
+  // compaction recovery, and queued follow-up messages are all done. This is
+  // the critical checkpoint where we decide done/steer/continue.
 
-  pi.on('agent_end', async (_event, ctx) => {
+  pi.on('agent_settled', async (_event, ctx) => {
     currentCtx = ctx;
     if (!state.isActive()) return;
 
