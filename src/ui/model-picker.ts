@@ -17,6 +17,20 @@ export async function pickModel(
   currentProvider?: string,
   currentModelId?: string
 ): Promise<Model<any> | null> {
+  if (ctx.mode !== 'tui') {
+    if (!ctx.hasUI) return null;
+    const all = ctx.modelRegistry.getAll();
+    if (all.length === 0) {
+      ctx.ui.notify('No models available.', 'info');
+      return null;
+    }
+    const items = all.map((m) => `${m.name ?? m.id} (${m.provider}/${m.id})`);
+    const pick = await ctx.ui.select('Pick a model', items);
+    if (pick === undefined) return null;
+    const idx = items.indexOf(pick);
+    if (idx < 0) return null;
+    return all[idx] ?? null;
+  }
   // Resolve the currently-selected supervisor model (to pre-highlight it)
   const currentModel =
     currentProvider && currentModelId
