@@ -85,6 +85,16 @@ export default function (pi: ExtensionAPI) {
   const widgetState = createInitialState();
   let currentCtx: ExtensionContext | undefined;
   let idleSteers = 0; // consecutive agent_end steers; reset on done/stop/new loop
+  let userInputEpoch = 0;
+
+  pi.on('input', (event) => {
+    if (event.source === 'interactive' || event.source === 'rpc') {
+      userInputEpoch++;
+    }
+  });
+  pi.on('before_agent_start', () => {
+    userInputEpoch++;
+  });
 
   // ---- Session lifecycle: restore state ----
 
@@ -212,6 +222,7 @@ export default function (pi: ExtensionAPI) {
   pi.on('agent_settled', async (_event, ctx) => {
     currentCtx = ctx;
     if (!state.isActive()) return;
+    const inputEpochAtStart = userInputEpoch;
 
     state.incrementTurnCount();
     const s = state.getState()!;
@@ -261,7 +272,7 @@ export default function (pi: ExtensionAPI) {
     const decision = await analyze(
       ctx,
       s,
-      true /* always idle at agent_end */,
+      true /* fully settled checkpoint */,
       ineffectivePattern,
       undefined,
       (accumulated) => {
@@ -274,6 +285,16 @@ export default function (pi: ExtensionAPI) {
         });
       }
     );
+
+    // A real user prompt supersedes a decision computed from the preceding
+    // settled snapshot. Do not race that prompt or steer from stale context.
+    if (userInputEpoch !== inputEpochAtStart) {
+      updateUI(ctx, widgetState, state.getState(), {
+        type: 'watching',
+        reframeTier: state.getReframeTier(),
+      });
+      return;
+    }
 
     if (decision.action === 'steer' && decision.message) {
       idleSteers++;
@@ -289,7 +310,7 @@ export default function (pi: ExtensionAPI) {
         message: decision.message,
         reframeTier: state.getReframeTier(),
       });
-      pi.sendUserMessage(decision.message);
+      pi.sendUserMessage(decision.message, { deliverAs: 'followUp' });
     } else if (decision.action === 'done') {
       idleSteers = 0;
       state.resetReframeTier();
@@ -317,7 +338,7 @@ export default function (pi: ExtensionAPI) {
         message: steerMessage,
         reframeTier: state.getReframeTier(),
       });
-      pi.sendUserMessage(steerMessage);
+      pi.sendUserMessage(steerMessage, { deliverAs: 'followUp' });
     } else {
       updateUI(ctx, widgetState, state.getState(), {
         type: 'watching',
