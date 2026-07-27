@@ -175,6 +175,8 @@ function renderWithState(
     return {
       render: (width: number) => {
         const paddedWidth = Math.max(0, width - 1);
+        const fitLines = (lines: string[]) =>
+          lines.map((line) => truncateToWidth(line, paddedWidth, ''));
         widgetState.lastRenderedWidth = paddedWidth;
         const suffix = suffixParts.length > 0 ? sep + suffixParts.join(sep) : '';
 
@@ -206,7 +208,7 @@ function renderWithState(
           const visibleLines = widgetState.lastThinkingLines
             .slice(0, visibleCount)
             .map((ln) => theme.fg('dim', ln));
-          return [l1, ...visibleLines];
+          return fitLines([l1, ...visibleLines]);
         }
 
         // For non-analyzing states (steering/done/waiting), preserve existing line breaks.
@@ -214,12 +216,12 @@ function renderWithState(
         const isAnalyzing = action.type === 'analyzing';
         if (!isAnalyzing && widgetState.lastThinkingLines.length > 0) {
           const visibleLines = widgetState.lastThinkingLines.map((ln) => theme.fg('dim', ln));
-          return [l1, ...visibleLines];
+          return fitLines([l1, ...visibleLines]);
         }
 
         // No thinking to display
         if (!rawThinking) {
-          return [l1];
+          return fitLines([l1]);
         }
 
         const thinkingIndent = stripAnsi(thinkingPrefix).length;
@@ -249,7 +251,7 @@ function renderWithState(
         }
 
         widgetState.lastThinkingLines = plainLines;
-        return [l1, ...thinkingLines];
+        return fitLines([l1, ...thinkingLines]);
       },
       invalidate: () => {},
     };
