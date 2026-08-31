@@ -118,7 +118,7 @@ You are asked: "Refactor auth to use dependency injection."
 **Phase 2: Verify** (using different tools)
 
 - `read` auth.ts: Is the DI wiring correct? Did I miss any edge cases?
-- `bash`: pnpm test (run the test suite, get objective results)
+- `bash`: bun run test (run the test suite, get objective results)
 - `search`: grep for old auth imports (find any orphans I forgot to update)
 - `read` login.ts, signup.ts: Are the call sites properly updated?
 
