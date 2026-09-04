@@ -39,6 +39,9 @@ export interface LoopState {
   // Reframe escalation tracking
   reframeTier?: ReframeTier;
   lastSteerTurn?: number; // track when we last steered to detect ineffectiveness
+  // Failsafe guardrails tracking
+  consecutiveSteers?: number;
+  fingerprintHistory?: string[];
 }
 
 /** Decision returned by the observer LLM */

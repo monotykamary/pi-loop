@@ -87,9 +87,20 @@ export default function (pi: ExtensionAPI) {
   let idleSteers = 0; // consecutive agent_end steers; reset on done/stop/new loop
   let userInputEpoch = 0;
 
+  function abortByFailsafe(ctx: ExtensionContext, message?: string): void {
+    state.stop();
+    idleSteers = 0;
+    disposeSession();
+    updateUI(ctx, widgetState, state.getState(), { type: 'done' });
+    ctx.ui.notify(message || 'Verification loop aborted by failsafe guard.', 'error');
+  }
+
   pi.on('input', (event) => {
     if (event.source === 'interactive' || event.source === 'rpc') {
       userInputEpoch++;
+      if (state.isActive()) {
+        state.resetFailsafe();
+      }
     }
   });
   pi.on('before_agent_start', () => {
@@ -202,6 +213,12 @@ export default function (pi: ExtensionAPI) {
 
     // Mid-run threshold: only intervene if clearly off track
     if (decision.action === 'steer' && decision.message && decision.confidence >= 0.85) {
+      const failsafeResult = state.checkFailsafe(decision.message);
+      if (failsafeResult.veto) {
+        abortByFailsafe(ctx, failsafeResult.message);
+        return;
+      }
+      state.recordSteer(failsafeResult.fingerprint!);
       state.addIntervention({
         turnCount: state.getState()!.turnCount,
         message: decision.message,
@@ -297,6 +314,12 @@ export default function (pi: ExtensionAPI) {
     }
 
     if (decision.action === 'steer' && decision.message) {
+      const failsafeResult = state.checkFailsafe(decision.message);
+      if (failsafeResult.veto) {
+        abortByFailsafe(ctx, failsafeResult.message);
+        return;
+      }
+      state.recordSteer(failsafeResult.fingerprint!);
       idleSteers++;
       state.addIntervention({
         turnCount: s.turnCount,
@@ -322,10 +345,16 @@ export default function (pi: ExtensionAPI) {
       // FALLBACK: Schema when idle only lists "done" | "steer", but models
       // occasionally return invalid actions. Convert to steer since the
       // model isn't confident enough to say 'done'.
-      idleSteers++;
       const steerMessage = decision.message?.trim()
         ? decision.message
         : 'Please continue working toward the goal.';
+      const failsafeResult = state.checkFailsafe(steerMessage);
+      if (failsafeResult.veto) {
+        abortByFailsafe(ctx, failsafeResult.message);
+        return;
+      }
+      state.recordSteer(failsafeResult.fingerprint!);
+      idleSteers++;
       state.addIntervention({
         turnCount: s.turnCount,
         message: steerMessage,
