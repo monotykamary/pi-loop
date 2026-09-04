@@ -10,6 +10,7 @@ import {
   escalateReframeTier as escalateReframeTierInState,
   resetReframeTier as resetReframeTierInState,
 } from './reframe.js';
+import { LoopFailsafeGuard, type FailsafeCheckResult } from '../core/failsafe.js';
 
 const ENTRY_TYPE = 'loop-state';
 
@@ -19,12 +20,14 @@ const DEFAULT_MODEL_ID: string | null = null;
 export class LoopStateManager {
   private state: LoopState | null = null;
   private pi: ExtensionAPI;
+  private failsafeGuard: LoopFailsafeGuard | null = null;
 
   constructor(pi: ExtensionAPI) {
     this.pi = pi;
   }
 
   start(outcome: string, provider: string, modelId: string): void {
+    this.failsafeGuard = new LoopFailsafeGuard({}, 0, []);
     this.state = {
       active: true,
       outcome,
@@ -38,14 +41,19 @@ export class LoopStateManager {
       justSteered: false,
       reframeTier: 0,
       lastSteerTurn: -1,
+      consecutiveSteers: 0,
+      fingerprintHistory: [],
     };
     this.persist();
   }
 
   stop(): void {
     if (!this.state) return;
+    this.failsafeGuard?.reset();
     this.state.active = false;
     this.state.outcome = ''; // Clear the goal so /supervise starts fresh, not in append mode
+    this.state.consecutiveSteers = 0;
+    this.state.fingerprintHistory = [];
     this.persist();
   }
 
@@ -125,6 +133,48 @@ export class LoopStateManager {
     this.persist();
   }
 
+  // ---- Failsafe guardrails ----
+
+  checkFailsafe(directive: string): FailsafeCheckResult {
+    if (!this.failsafeGuard) {
+      this.failsafeGuard = new LoopFailsafeGuard(
+        {},
+        this.state?.consecutiveSteers ?? 0,
+        this.state?.fingerprintHistory ?? []
+      );
+    }
+    return this.failsafeGuard.check(directive);
+  }
+
+  recordSteer(fingerprint: string): void {
+    if (!this.failsafeGuard) {
+      this.failsafeGuard = new LoopFailsafeGuard(
+        {},
+        this.state?.consecutiveSteers ?? 0,
+        this.state?.fingerprintHistory ?? []
+      );
+    }
+    this.failsafeGuard.recordDispatched(fingerprint);
+    if (this.state) {
+      this.state.consecutiveSteers = this.failsafeGuard.getConsecutiveSteers();
+      this.state.fingerprintHistory = this.failsafeGuard.getHistory();
+      this.persist();
+    }
+  }
+
+  resetFailsafe(): void {
+    const hadState =
+      (this.state?.consecutiveSteers ?? 0) > 0 || (this.state?.fingerprintHistory?.length ?? 0) > 0;
+    this.failsafeGuard?.reset();
+    if (this.state) {
+      this.state.consecutiveSteers = 0;
+      this.state.fingerprintHistory = [];
+      if (hadState) {
+        this.persist();
+      }
+    }
+  }
+
   // ---- Pattern detection ----
 
   detectIneffectivePattern(): IneffectivePattern {
@@ -148,6 +198,11 @@ export class LoopStateManager {
           lastAnalyzedTurn: -1,
           justSteered: false,
         };
+        this.failsafeGuard = new LoopFailsafeGuard(
+          {},
+          loaded.consecutiveSteers ?? 0,
+          loaded.fingerprintHistory ?? []
+        );
         return;
       }
     }
