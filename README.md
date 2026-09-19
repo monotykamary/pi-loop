@@ -239,6 +239,28 @@ Response schema (strict JSON, required):
 }
 ```
 
+## Failsafe Guardrails
+
+Long autonomous runs can start steering back and forth without making progress.
+pi-loop fingerprints every steering directive it sends (ANSI codes, case, and
+punctuation are normalized) and stops the loop when one of two guards trips:
+
+- **Cyclic oscillation** — the recent directive pattern repeats as a cycle of
+  length 1–3 twice in a row (for example `fix test_a` → `fix test_b` →
+  `fix test_a` → `fix test_b`).
+- **Iteration ceiling** — an optional cap on consecutive steering directives,
+  disabled by default. Enable it with the `PI_LOOP_MAX_STEERS` environment
+  variable:
+
+  ```bash
+  PI_LOOP_MAX_STEERS=8 pi
+  ```
+
+When a guard trips, the loop stops, the widget returns to idle, and a
+notification reports which guard aborted the run. Steering counters reset
+whenever you send a prompt yourself, when the loop finishes, and when a new
+loop starts.
+
 ## Session Persistence
 
 Supervision state (outcome, model, intervention history) is stored in the pi session file and restored automatically on restart, session switch, fork, and tree navigation.
