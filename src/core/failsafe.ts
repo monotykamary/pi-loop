@@ -5,7 +5,10 @@ export interface FailsafeConfig {
   maxConsecutiveSteers?: number;
   /** Maximum period length to check for cyclic patterns (default: 3). */
   maxCycleLength?: number;
-  /** Number of cycle recurrences required to trigger oscillation veto (default: 2). */
+  /**
+   * Number of cycle recurrences required to trigger oscillation veto (default: 2).
+   * Values below 2 are raised to 2, which is the smallest meaningful recurrence.
+   */
   cycleThreshold?: number;
   /** Maximum number of recent fingerprints kept in rolling history (default: 12). */
   historyWindowSize?: number;
@@ -38,10 +41,16 @@ export class LoopFailsafeGuard {
     this.maxConsecutiveSteers =
       config.maxConsecutiveSteers ??
       (envLimit !== undefined && !Number.isNaN(envLimit) ? envLimit : 0);
-    this.maxCycleLength = config.maxCycleLength ?? 3;
-    this.cycleThreshold = config.cycleThreshold ?? 2;
-    this.maxHistoryWindow =
-      config.historyWindowSize ?? this.maxCycleLength * this.cycleThreshold * 2;
+    this.maxCycleLength = Math.max(1, config.maxCycleLength ?? 3);
+    // A recurrence count below 2 makes the comparison loop vacuous, which would
+    // veto every directive; 2 is the smallest meaningful threshold.
+    this.cycleThreshold = Math.max(2, config.cycleThreshold ?? 2);
+    // Keep at least one full cycle pair so detection is never starved.
+    const minHistoryWindow = this.maxCycleLength * this.cycleThreshold;
+    this.maxHistoryWindow = Math.max(
+      config.historyWindowSize ?? minHistoryWindow * 2,
+      minHistoryWindow
+    );
     this.consecutiveSteers = initialSteers;
     this.history = [...initialHistory];
   }

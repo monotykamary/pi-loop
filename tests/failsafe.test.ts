@@ -183,6 +183,77 @@ describe('LoopFailsafeGuard', () => {
       expect(api.appendEntry.mock.calls.length).toBe(persistCountBefore + 1);
     });
 
+    it('raises cycleThreshold below 2 so directives are not vetoed immediately', () => {
+      const guard = new LoopFailsafeGuard({ cycleThreshold: 1 });
+
+      const first = guard.check('Fix the failing test');
+      expect(first.veto).toBe(false);
+      guard.recordDispatched(first.fingerprint!);
+
+      const second = guard.check('Fix the flaky test');
+      expect(second.veto).toBe(false);
+      guard.recordDispatched(second.fingerprint!);
+    });
+
+    it('keeps a history window large enough to complete a cycle check', () => {
+      const guard = new LoopFailsafeGuard({
+        maxCycleLength: 2,
+        cycleThreshold: 2,
+        historyWindowSize: 1,
+      });
+      const a = 'Fix test_a assertion';
+      const b = 'Fix test_b type error';
+
+      for (const message of [a, b, a]) {
+        const result = guard.check(message);
+        expect(result.veto).toBe(false);
+        guard.recordDispatched(result.fingerprint!);
+      }
+
+      const final = guard.check(b);
+      expect(final.veto).toBe(true);
+      expect(final.period).toBe(2);
+    });
+
+    it('keeps counting steers after restoring session state', () => {
+      const api = createMockApi();
+      const state = new LoopStateManager(api);
+      state.start('Test goal', 'anthropic', 'claude-haiku');
+      const fp1 = LoopFailsafeGuard.computeFingerprint('Directive 1');
+      state.recordSteer(fp1);
+
+      const mockCtx = {
+        sessionManager: {
+          getBranch: () => [
+            {
+              type: 'custom',
+              customType: 'loop-state',
+              data: {
+                active: true,
+                outcome: 'Test goal',
+                provider: 'anthropic',
+                modelId: 'claude-haiku',
+                interventions: [],
+                startedAt: Date.now(),
+                turnCount: 1,
+                consecutiveSteers: 1,
+                fingerprintHistory: [fp1],
+              },
+            },
+          ],
+        },
+      } as any;
+
+      const restored = new LoopStateManager(api);
+      restored.loadFromSession(mockCtx);
+
+      const next = restored.checkFailsafe('Directive 2');
+      expect(next.veto).toBe(false);
+      restored.recordSteer(next.fingerprint!);
+      expect(restored.getState()!.consecutiveSteers).toBe(2);
+      expect(restored.getState()!.fingerprintHistory).toEqual([fp1, next.fingerprint!]);
+    });
+
     it('restores failsafe counters and history from session entry', () => {
       const api = createMockApi();
       const state = new LoopStateManager(api);
