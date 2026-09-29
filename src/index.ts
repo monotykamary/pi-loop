@@ -24,7 +24,7 @@ import { updateUI, toggleWidget } from './ui/renderer.js';
 import { pickModel } from './ui/model-picker.js';
 import { loadGlobalModel } from './global-config.js';
 import { disposeSession } from './session/client.js';
-import { Type } from '@sinclair/typebox';
+import { Type } from 'typebox';
 import { checkChildPiProcesses, waitForSubagents } from './subagent-detector.js';
 import { createInitialState, type WidgetState } from './ui/types.js';
 
