@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+- Validate against Pi 1.0.0 with pinned development dependencies and host-provided wildcard peers.
+- Exercise real Pi headless startup, public command/tool registration, and shutdown in an isolated offline workspace.
+- Include the declared pi-loop skill in published packages.
+
 ## 0.2.3
 
 - Validate against Pi 0.99.0, including an offline real-host package-loading probe.
